@@ -29,5 +29,11 @@ export async function updateSession(request: NextRequest) {
         }
     );
 
+    if (request.nextUrl.pathname === "/") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+    }
+
     return supabaseResponse;
 }
