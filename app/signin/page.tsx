@@ -1,13 +1,37 @@
 "use client";
-import {useState} from "react";
+import {SyntheticEvent, useState} from "react";
+import {createClient} from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function SignInPage() {
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [message, setMessage] = useState("");
+    const supabase = createClient()
+    const router = useRouter();
+
+    async function handleAuth(event: SyntheticEvent) {
+        event.preventDefault();
+
+        try {
+            if (isSignUp) {
+                const {error} = await supabase.auth.signUp({email, password});
+                if (error) throw error;
+                setMessage("Check your email for the confirmation link!")
+            } else {
+                const {error} = await supabase.auth.signInWithPassword({email, password});
+                if (error) throw error;
+                router.push("/dashboard");
+            }
+        } catch {
+
+        }
+    }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div
+            className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
                 <div className="text-center">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -19,7 +43,12 @@ export default function SignInPage() {
                 </div>
 
                 <div className="bg-white rounded-lg shadow-lg p-8">
-                    <form className="space-y-6">
+                    <form className="space-y-6" onSubmit={handleAuth}>
+                        {message && (
+                            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                                <p className="text-sm text-green-600">Message: {message}</p>
+                            </div>
+                        )}
                         <div>
                             <label
                                 htmlFor="email"
@@ -32,6 +61,8 @@ export default function SignInPage() {
                                 name="email"
                                 type="email"
                                 required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-black focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Enter your email"
                             />
@@ -49,6 +80,8 @@ export default function SignInPage() {
                                 name="password"
                                 type="password"
                                 required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 className="mt-1 block w-full px-3 py-2 border text-black border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Enter your password"
                             />
