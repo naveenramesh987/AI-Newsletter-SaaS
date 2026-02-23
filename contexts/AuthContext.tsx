@@ -1,5 +1,5 @@
 "use client"
-import {createContext, ReactNode, useEffect, useState} from "react";
+import {createContext, ReactNode, useContext, useEffect, useState} from "react";
 import {Session, User} from "@supabase/auth-js";
 import {createClient} from "@/lib/supabase/client";
 
@@ -24,9 +24,30 @@ export function AuthProvider({children}: { children: ReactNode }) {
             setUser(session?.user ?? null);
             setLoading(false);
         })
+
+        const {data: {subscription}} = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            setUser(session?.user ?? null);
+            setLoading(false);
+        })
+
+        return () => {
+            subscription.unsubscribe();
+        }
     }, []);
 
-    const value = {user, session, loading}
+    async function signOut() {
+        await supabase.auth.signOut();
+    }
 
+    const value = {user, session, loading, signOut};
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error("useAuth must be used within a AuthProvider");
+    }
+    return context;
 }
