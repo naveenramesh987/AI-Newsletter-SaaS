@@ -1,6 +1,7 @@
 "use client";
-
-import {useState} from "react";
+import {SyntheticEvent, useState} from "react";
+import {useAuth} from "@/contexts/AuthContext";
+import {useRouter} from "next/navigation";
 
 const categories = [
     {
@@ -13,7 +14,11 @@ const categories = [
         name: "Business",
         description: "Business trends and market updates",
     },
-    {id: "sports", name: "Sports", description: "Sports news and highlights"},
+    {
+        id: "sports",
+        name: "Sports",
+        description: "Sports news and highlights",
+    },
     {
         id: "entertainment",
         name: "Entertainment",
@@ -24,7 +29,11 @@ const categories = [
         name: "Science",
         description: "Scientific discoveries and research",
     },
-    {id: "health", name: "Health", description: "Health and wellness updates"},
+    {
+        id: "health",
+        name: "Health",
+        description: "Health and wellness updates",
+    },
     {
         id: "politics",
         name: "Politics",
@@ -45,10 +54,50 @@ const frequencyOptions = [
 
 export default function SelectPage() {
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [selectedFrequency, setSelectedFrequency] = useState<string>("weekly");
+    const {user} = useAuth()
+    const router = useRouter()
 
     function handleCategoryToggle(categoryId: string) {
-        setSelectedCategories((prev) => prev.includes(categoryId) ? prev.filter((id) =>
-            id !== categoryId) : [...prev, categoryId])
+        setSelectedCategories((prev) =>
+            prev.includes(categoryId)
+                ? prev.filter((id) => id !== categoryId)
+                : [...prev, categoryId]
+        );
+    }
+
+    async function handleSavePreferences(e: SyntheticEvent) {
+        e.preventDefault();
+        if (selectedCategories.length === 0) {
+            alert("Please select at least one category");
+            return
+        }
+
+        if (!user) {
+            alert("Please sign in to continue");
+            return
+        }
+
+        try {
+            const response = await fetch("/api/user-preferences", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    categories: selectedCategories,
+                    frequency: selectedFrequency,
+                    email: user.email,
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error("Failed to save preferences");
+            }
+
+            alert("Your newsletter preferences have been saved! You'll receive them soon.")
+            router.push("/dashboard");
+        } catch (error) {
+            alert("Failed to save preferences. Please try again.")
+        }
     }
 
     return (
@@ -63,14 +112,14 @@ export default function SelectPage() {
                         personalized newsletters
                     </p>
                 </div>
-                <form>
+
+                <form onSubmit={handleSavePreferences}>
                     <div>
                         <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                             Choose Your Categories
                         </h2>
                         <p className="text-gray-600 mb-6">
-                            Select the topics you'd like to see in your personalized
-                            newsletter
+                            Select the topics you'd like to see in your personalized newsletter
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -85,10 +134,12 @@ export default function SelectPage() {
                                 >
                                     <input
                                         type="checkbox"
+                                        name="categories"
                                         className="sr-only"
                                         checked={selectedCategories.includes(category.id)}
                                         onChange={() => handleCategoryToggle(category.id)}
                                     />
+
                                     <div className="flex items-center h-5">
                                         <div
                                             className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
@@ -105,13 +156,14 @@ export default function SelectPage() {
                                                 >
                                                     <path
                                                         fillRule="evenodd"
-                                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                                         clipRule="evenodd"
+                                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                                     />
                                                 </svg>
                                             )}
                                         </div>
                                     </div>
+
                                     <div className="ml-3">
                                         <div className="text-sm font-medium text-gray-900">
                                             {category.name}
@@ -130,16 +182,79 @@ export default function SelectPage() {
                         </div>
                     </div>
 
-                    <div>
+                    <div className="mb-8">
                         <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                             Delivery Frequency
                         </h2>
                         <p className="text-gray-600 mb-6">
                             How often would you like to receive your newsletter?
                         </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {frequencyOptions.map((frequency) => (
+                                <label
+                                    key={frequency.id}
+                                    className={`relative flex items-start p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${
+                                        selectedFrequency === frequency.id
+                                            ? "border-blue-500 bg-blue-50"
+                                            : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="frequency"
+                                        className="sr-only"
+                                        checked={selectedFrequency === frequency.id}
+                                        onChange={() => setSelectedFrequency(frequency.id)}
+                                    />
+
+                                    <div>
+                                        <div
+                                            className={`w-5 h-5 border-2 rounded-full flex items-center justify-center ${
+                                                selectedFrequency === frequency.id
+                                                    ? "border-blue-500 bg-blue-500"
+                                                    : "border-gray-300"
+                                            }`}
+                                        >
+                                            {selectedFrequency === frequency.id && (
+                                                <div className="w-2 h-2 bg-white rounded-full"/>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="ml-3">
+                                        <div className="text-sm font-medium text-gray-900">
+                                            {frequency.name}
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                            {frequency.description}
+                                        </div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
                     </div>
+
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-600">
+                            {selectedCategories.length} categor
+                            {selectedCategories.length !== 1 ? "ies" : "y"} selected •
+                            {selectedFrequency} delivery
+                        </div>
+                        <button
+                            type="submit"
+                            className={`px-6 py-3 rounded-lg font-medium text-white transition-colors ${
+                                selectedCategories.length === 0
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-blue-600 hover:bg-blue-700"
+                            }`}
+                        >
+                            Save Preferences
+                        </button>
+                    </div>
+
                 </form>
             </div>
         </div>
-    )
+    );
 }
