@@ -1,17 +1,17 @@
-import {inngest} from "@/lib/inngest/client";
-import {fetchArticles} from "@/lib/news";
+import { inngest } from "@/lib/inngest/client";
+import { fetchArticles } from "@/lib/news";
 import emailjs from "@emailjs/nodejs";
-import {marked} from "marked";
-import {createClient} from "@/lib/supabase/server";
+import { marked } from "marked";
+import { createClient } from "@/lib/supabase/server";
 
 export default inngest.createFunction(
-    {id: "newsletter/scheduled"},
-    {event: "newsletter.schedule"},
-    async ({event, step, runId}) => {
+    { id: "newsletter/scheduled" },
+    { event: "newsletter.schedule" },
+    async ({ event, step, runId }) => {
         try {
             const isUserActive = await step.run("check-user-status", async () => {
                 const supabase = await createClient();
-                const {data, error} = await supabase
+                const { data, error } = await supabase
                     .from("user_preferences")
                     .select("is_active")
                     .eq("user_id", event.data.userId)
@@ -41,7 +41,7 @@ export default inngest.createFunction(
             });
 
             const summary = await step.ai.infer("summarize-news", {
-                model: step.ai.models.openai({model: "gpt-4o"}),
+                model: step.ai.models.openai({ model: "gpt-4o" }),
                 body: {
                     messages: [
                         {
@@ -83,8 +83,24 @@ export default inngest.createFunction(
             const htmlContent = marked(newsletterContent);
 
             await step.run("send-email", async () => {
+                let recipientEmail = event.data.email;
+
+                if (!recipientEmail) {
+                    const supabase = await createClient();
+                    const { data } = await supabase
+                        .from("user_preferences")
+                        .select("email")
+                        .eq("user_id", event.data.userId)
+                        .single();
+                    recipientEmail = data?.email;
+                }
+
+                if (!recipientEmail) {
+                    throw new Error("No recipient email address found");
+                }
+
                 const templateParams = {
-                    to_email: event.data.email,
+                    to_email: recipientEmail,
                     newsletter_content: htmlContent,
                     categories: event.data.categories.join(", "),
                     article_count: allArticles.length,
@@ -96,7 +112,7 @@ export default inngest.createFunction(
                 const publicKey = process.env.EMAILJS_PUBLIC_KEY;
                 const privateKey = process.env.EMAILJS_PRIVATE_KEY;
 
-                if (!serviceId || !templateId || !publicKey) {
+                if (!serviceId || !templateId || !publicKey || !privateKey) {
                     throw new Error("EmailJS configuration missing");
                 }
 
