@@ -32,7 +32,6 @@ The system utilizes **Inngest** for reliable, scheduled background jobs and **Em
 1.  **Clone the repository:**
 ```bash
     git clone https://github.com/naveenramesh987/AI-Newsletter-SaaS.git
-    cd AI-Newsletter-SaaS
 ```
 
 2.  **Install dependencies:**
