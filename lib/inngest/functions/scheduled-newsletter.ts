@@ -1,11 +1,13 @@
 import {inngest} from "@/lib/inngest/client";
 import {fetchArticles} from "@/lib/news";
+import {marked} from "marked";
+import {sendEmail} from "@/lib/email";
 
 export default inngest.createFunction(
     {id: "newsletter/scheduled"},
     {event: "newsletter.schedule"},
     async ({event, step, runId}) => {
-        const categories = ["technology", "business", "politics"]
+        const categories = event.data.categories
         const allArticles = await step.run("fetch-news", async () => {
             return fetchArticles(categories)
         })
@@ -46,6 +48,17 @@ export default inngest.createFunction(
         })
 
         console.log(summary.choices[0].message.content)
+
+        const newsletterContent = summary.choices[0].message.content
+        if (!newsletterContent) {
+            throw new Error("Failed to fetch newsletter content")
+        }
+
+        const htmlResult = await marked(newsletterContent)
+        await step.run("send-email", async () => {
+            await sendEmail(event.data.email, event.data.categories.join(", "), allArticles.length, htmlResult)
+        })
+
         return {}
     }
 )

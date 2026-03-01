@@ -1,8 +1,13 @@
 "use client"
 import Link from "next/link";
 import {useRouter} from "next/navigation";
+import {useState} from "react";
 
+interface UserPreferences {
+
+}
 export default function DashboardPage() {
+    const [preferences, setPreferences] = useState<>(null)
     const router = useRouter();
     return (
         <div>
